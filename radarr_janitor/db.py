@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS candidates (
     seasonal    INTEGER NOT NULL DEFAULT 0,
     verdict     TEXT,
     reason      TEXT,
+    poster      TEXT,
     PRIMARY KEY (run_id, tmdb_id)
 );
 
@@ -73,7 +74,14 @@ class Db:
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        # Add columns to pre-existing DBs without dropping data.
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(candidates)")}
+        if "poster" not in cols:
+            self.conn.execute("ALTER TABLE candidates ADD COLUMN poster TEXT")
 
     def close(self) -> None:
         self.conn.close()
@@ -154,14 +162,15 @@ class Db:
         payload = dict(c)
         payload["genres"] = ",".join(c.get("genres", []))
         payload["run_id"] = run_id
+        payload.setdefault("poster", None)
         self.conn.execute(
             """
             INSERT OR REPLACE INTO candidates
                 (run_id, tmdb_id, radarr_id, title, year, genres, imdb, rt, metacritic,
-                 tmdb, size_bytes, seasonal, verdict, reason)
+                 tmdb, size_bytes, seasonal, verdict, reason, poster)
             VALUES
                 (:run_id, :tmdb_id, :radarr_id, :title, :year, :genres, :imdb, :rt, :metacritic,
-                 :tmdb, :size_bytes, :seasonal, :verdict, :reason)
+                 :tmdb, :size_bytes, :seasonal, :verdict, :reason, :poster)
             """,
             payload,
         )

@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _poster(movie: dict[str, Any]) -> str | None:
+    for img in movie.get("images", []) or []:
+        if img.get("coverType") == "poster":
+            return img.get("remoteUrl") or img.get("url")
+    return None
+
+
 @dataclass
 class Thresholds:
     """What makes a movie a removal *candidate*. Any matching rule flags it.
@@ -104,4 +111,5 @@ def evaluate(
         "seasonal": 1 if seasonal_hit else 0,
         "verdict": verdict,
         "reason": reason,
+        "poster": _poster(movie),
     }
