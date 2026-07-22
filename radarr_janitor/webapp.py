@@ -83,6 +83,25 @@ def create_app(cfg: Config | None = None) -> Flask:
             totals=totals, keep=keep, humanize=humanize,
         )
 
+    @app.route("/api/candidates")
+    def api_candidates():
+        d = Db(cfg.db_path)
+        run = d.latest_run("report")
+        rows = d.candidates(run["id"]) if run else []
+        d.close()
+        out = [
+            {
+                "radarr_id": c["radarr_id"], "tmdb_id": c["tmdb_id"],
+                "title": c["title"], "year": c["year"],
+                "imdb": c["imdb"], "rt": c["rt"], "metacritic": c["metacritic"],
+                "size_bytes": c["size_bytes"], "size_h": humanize(c["size_bytes"]),
+                "verdict": c["verdict"], "reason": c["reason"],
+                "seasonal": c["seasonal"], "poster": c["poster"],
+            }
+            for c in rows
+        ]
+        return {"run": run["id"] if run else None, "candidates": out}
+
     @app.route("/run", methods=["POST"])
     def run():
         args = [sys.executable, "-m", "radarr_janitor.cli", "report"]

@@ -1,6 +1,6 @@
 [project]
 name = "radarr-janitor"
-version = "2.2.0"
+version = "2.0.0"
 description = "Score-aware, AI-assisted cleanup for a Radarr library: genre sweeps, multi-source rating thresholds, and seasonal pruning with a human-approved candidate list."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,7 +25,7 @@ build-backend = "setuptools.build_meta"
 packages = ["radarr_janitor", "radarr_janitor.providers"]
 
 [tool.setuptools.package-data]
-radarr_janitor = ["templates/*.html"]
+radarr_janitor = ["templates/*.html", "static/*"]
 
 [tool.ruff]
 line-length = 110

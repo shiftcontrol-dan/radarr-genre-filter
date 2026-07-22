@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Radarr Janitor">
+  <rect width="64" height="64" rx="14" fill="#171a21"/>
+  <g transform="rotate(-7 32 34)">
+    <rect x="12" y="28" width="40" height="24" rx="3" fill="#4c8dff"/>
+    <path d="M11 26 h40 l-2.5 8 h-40 z" fill="#e6e9ef"/>
+    <g stroke="#171a21" stroke-width="2.4" stroke-linecap="round">
+      <path d="M18 26 l-3 8"/><path d="M26 26 l-3 8"/><path d="M34 26 l-3 8"/><path d="M42 26 l-3 8"/>
+    </g>
+    <circle cx="32" cy="41" r="5.5" fill="none" stroke="#e6e9ef" stroke-width="2.4"/>
+  </g>
+</svg>
