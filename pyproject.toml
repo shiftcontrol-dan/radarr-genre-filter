@@ -1,0 +1,27 @@
+[project]
+name = "radarr-janitor"
+version = "2.0.0"
+description = "Score-aware, AI-assisted cleanup for a Radarr library: genre sweeps, multi-source rating thresholds, and seasonal pruning with a human-approved candidate list."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "requests>=2.31",
+]
+
+[project.scripts]
+radarr-janitor = "radarr_janitor.cli:main"
+
+[project.optional-dependencies]
+dev = ["ruff>=0.5", "pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["radarr_janitor", "radarr_janitor.providers"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
