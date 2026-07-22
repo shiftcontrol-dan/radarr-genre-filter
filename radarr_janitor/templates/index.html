@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radarr Janitor</title>
+<style>
+  :root { color-scheme: dark; --bg:#0f1115; --panel:#171a21; --line:#262b36; --fg:#e6e9ef; --muted:#9aa4b2;
+          --remove:#e5534b; --review:#d9a441; --keep:#3fb950; --accent:#4c8dff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:16px 22px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:14px; }
+  h1 { font-size:18px; margin:0; } .muted { color:var(--muted); }
+  main { padding:22px; max-width:1200px; margin:0 auto; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:20px; }
+  .flash { background:#1d2733; border:1px solid var(--accent); border-radius:8px; padding:10px 14px; margin-bottom:16px; }
+  label { display:block; margin:8px 0 4px; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  input[type=number], input[type=text] { background:#0d1017; border:1px solid var(--line); color:var(--fg); border-radius:6px; padding:7px 9px; width:120px; }
+  .genres { display:flex; flex-wrap:wrap; gap:6px; max-height:120px; overflow:auto; }
+  .genres label { display:inline-flex; align-items:center; gap:5px; background:#0d1017; border:1px solid var(--line);
+                  padding:5px 9px; border-radius:16px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--fg); cursor:pointer; }
+  .row { display:flex; gap:22px; flex-wrap:wrap; align-items:flex-end; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:7px; padding:9px 16px; font-weight:600; cursor:pointer; }
+  button.danger { background:var(--remove); } button.ghost { background:#222; }
+  .totals { display:flex; gap:10px; margin:6px 0 16px; }
+  .pill { padding:4px 10px; border-radius:14px; font-size:12px; border:1px solid var(--line); }
+  .pill.remove { color:var(--remove); border-color:var(--remove); }
+  .pill.review { color:var(--review); border-color:var(--review); }
+  .pill.keep { color:var(--keep); border-color:var(--keep); }
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--muted); font-size:12px; text-transform:uppercase; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .tag { font-size:11px; padding:1px 6px; border-radius:10px; background:#0d1017; border:1px solid var(--line); color:var(--muted); }
+  .seasonal { color:var(--review); }
+  form.inline { display:inline; }
+  .sticky-actions { position:sticky; bottom:0; background:var(--panel); border-top:1px solid var(--line); padding:12px 16px;
+                    display:flex; gap:14px; align-items:center; margin:0 -16px -16px; border-radius:0 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 Radarr Janitor</h1>
+  <span class="muted">
+    {% if run %}latest report #{{ run.id }} · {{ run.ts[:16].replace("T"," ") }}{% else %}no report yet{% endif %}
+  </span>
+</header>
+<main>
+  {% with messages = get_flashed_messages() %}
+    {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="panel">
+    <form method="post" action="{{ url_for('run') }}">
+      <label>Genres to sweep</label>
+      <div class="genres">
+        {% for g in genres %}<label><input type="checkbox" name="genres" value="{{ g }}">{{ g }}</label>{% endfor %}
+        {% if not genres %}<span class="muted">(couldn't load genres — check Radarr connection)</span>{% endif %}
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div><label>IMDb below</label><input type="number" step="0.1" name="imdb_below" placeholder="e.g. 5.5"></div>
+        <div><label>Rotten Tomatoes below %</label><input type="number" name="rt_below" placeholder="e.g. 40"></div>
+        <div><label>Metacritic below</label><input type="number" name="meta_below" placeholder="e.g. 40"></div>
+        <div><label>Max OMDb lookups</label><input type="number" name="max_omdb" value="950"></div>
+        <div><label>Seasonal</label><input type="checkbox" name="seasonal"> holiday pile-up</div>
+        <div><button type="submit">Build report</button></div>
+      </div>
+    </form>
+  </div>
+
+  <div class="totals">
+    <span class="pill remove">remove: {{ totals.remove.n }} ({{ totals.remove.size }})</span>
+    <span class="pill review">review: {{ totals.review.n }} ({{ totals.review.size }})</span>
+    <span class="pill keep">protected: {{ totals.keep.n }}</span>
+  </div>
+
+  <form method="post" action="{{ url_for('apply') }}"
+        onsubmit="return confirm('Delete the checked movies from Radarr and disk? This cannot be undone.');">
+    <div class="panel">
+      {% for verdict in ['remove','review','keep'] %}
+        {% set rows = groups.get(verdict, []) %}
+        {% if rows %}
+          <h3 style="text-transform:capitalize">{{ verdict }} ({{ rows|length }})</h3>
+          <table>
+            <tr><th></th><th>Title</th><th>Yr</th><th class="num">IMDb</th><th class="num">RT</th>
+                <th class="num">MC</th><th class="num">Size</th><th>Reason</th><th></th></tr>
+            {% for c in rows %}
+            <tr>
+              <td>{% if verdict != 'keep' %}<input type="checkbox" name="delete" value="{{ c.radarr_id }}"
+                     {% if verdict=='remove' %}checked{% endif %}>{% endif %}</td>
+              <td>{{ c.title }}{% if c.seasonal %} <span class="tag seasonal">seasonal</span>{% endif %}</td>
+              <td>{{ c.year or "" }}</td>
+              <td class="num">{{ c.imdb if c.imdb is not none else "–" }}</td>
+              <td class="num">{{ (c.rt ~ "%") if c.rt is not none else "–" }}</td>
+              <td class="num">{{ c.metacritic if c.metacritic is not none else "–" }}</td>
+              <td class="num">{{ humanize(c.size_bytes) }}</td>
+              <td class="muted">{{ c.reason }}</td>
+              <td>
+                {% if verdict != 'keep' %}
+                <button class="ghost" formmethod="post" formaction="{{ url_for('keep_add') }}"
+                        name="tmdb_id" value="{{ c.tmdb_id }}" formnovalidate>protect</button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+        {% endif %}
+      {% endfor %}
+      {% if not groups.remove and not groups.review and not groups.keep %}
+        <p class="muted">No candidates yet. Configure a sweep above and build a report.</p>
+      {% endif %}
+      <div class="sticky-actions">
+        <label style="margin:0;text-transform:none"><input type="checkbox" name="deletefile" checked> delete files</label>
+        <label style="margin:0;text-transform:none"><input type="checkbox" name="exclude"> add exclusion (blacklist; skipped for seasonal)</label>
+        <button type="submit" class="danger">Delete checked</button>
+      </div>
+    </div>
+  </form>
+</main>
+</body>
+</html>

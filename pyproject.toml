@@ -11,9 +11,11 @@ dependencies = [
 
 [project.scripts]
 radarr-janitor = "radarr_janitor.cli:main"
+radarr-janitor-web = "radarr_janitor.webapp:main"
 
 [project.optional-dependencies]
 dev = ["ruff>=0.5", "pytest>=8.0"]
+web = ["flask>=3.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -21,6 +23,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["radarr_janitor", "radarr_janitor.providers"]
+
+[tool.setuptools.package-data]
+radarr_janitor = ["templates/*.html"]
 
 [tool.ruff]
 line-length = 110
