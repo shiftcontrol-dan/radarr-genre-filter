@@ -173,6 +173,26 @@ class Db:
         )
         return [dict(r) for r in rows]
 
+    def latest_candidate_title(self, tmdb_id: int) -> str | None:
+        run = self.latest_run("report")
+        if not run:
+            return None
+        row = self.conn.execute(
+            "SELECT title FROM candidates WHERE run_id = ? AND tmdb_id = ?", (run["id"], tmdb_id)
+        ).fetchone()
+        return row["title"] if row else None
+
+    def mark_kept_in_latest_run(self, tmdb_id: int) -> None:
+        """Flip a movie's verdict to 'keep' in the active report so it leaves the remove/review lists."""
+        run = self.latest_run("report")
+        if not run:
+            return
+        self.conn.execute(
+            "UPDATE candidates SET verdict = 'keep', reason = 'PROTECTED (keep-list)' "
+            "WHERE run_id = ? AND tmdb_id = ?", (run["id"], tmdb_id)
+        )
+        self.conn.commit()
+
     def latest_run(self, mode: str = "report") -> dict[str, Any] | None:
         row = self.conn.execute(
             "SELECT * FROM runs WHERE mode = ? ORDER BY id DESC LIMIT 1", (mode,)

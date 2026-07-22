@@ -107,11 +107,13 @@ def create_app(cfg: Config | None = None) -> Flask:
 
     @app.route("/keep", methods=["POST"])
     def keep_add():
+        tmdb_id = int(request.form["tmdb_id"])
         d = Db(cfg.db_path)
-        d.add_keep(int(request.form["tmdb_id"]), request.form.get("title", ""),
-                   request.form.get("reason", "protected via web UI"), source="user")
+        title = request.form.get("title") or d.latest_candidate_title(tmdb_id) or str(tmdb_id)
+        d.add_keep(tmdb_id, title, "protected via web UI", source="user")
+        d.mark_kept_in_latest_run(tmdb_id)  # move it out of remove/review in the current report
         d.close()
-        flash(f"protected: {request.form.get('title', '')}")
+        flash(f"protected: {title}")
         return redirect(url_for("index"))
 
     @app.route("/apply", methods=["POST"])

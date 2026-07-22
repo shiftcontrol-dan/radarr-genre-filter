@@ -55,6 +55,10 @@
     <form method="post" action="{{ url_for('run') }}">
       <label>Genres to sweep</label>
       <div class="genres">
+        {% if genres %}<label style="background:#1d2733;border-color:var(--accent)">
+          <input type="checkbox"
+                 onclick="document.querySelectorAll('input[name=genres]').forEach(c=>{c.checked=this.checked})">
+          <b>Select all</b></label>{% endif %}
         {% for g in genres %}<label><input type="checkbox" name="genres" value="{{ g }}">{{ g }}</label>{% endfor %}
         {% if not genres %}<span class="muted">(couldn't load genres — check Radarr connection)</span>{% endif %}
       </div>
