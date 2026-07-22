@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [2.1.0] - 2026-07-22
 ### Added
 - Flask web UI (`radarr-janitor-web`): configure sweeps, review candidates, protect films, and delete with an explicit confirm.
 - Dockerfile + container deployment behind Cloudflare (`janitor.dangericke.com`).
