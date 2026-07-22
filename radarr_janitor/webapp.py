@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import hmac
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, Response, flash, redirect, render_template, request, url_for
 
 from .cli import humanize
 from .config import Config
@@ -20,6 +21,28 @@ def create_app(cfg: Config | None = None) -> Flask:
     app = Flask(__name__)
     app.secret_key = os.environ.get("WEB_SECRET", "radarr-janitor-local")
     _cache: dict[str, list[str]] = {}
+
+    web_user = os.environ.get("WEB_USER")
+    web_pass = os.environ.get("WEB_PASSWORD")
+
+    @app.before_request
+    def _require_login():
+        # App-level HTTP Basic Auth. Disabled if WEB_USER/WEB_PASSWORD are unset
+        # (e.g. purely-local use); enabled in the container for janitor.dangericke.com.
+        if not web_user or not web_pass:
+            return None
+        auth = request.authorization
+        ok = (
+            auth is not None
+            and hmac.compare_digest(auth.username or "", web_user)
+            and hmac.compare_digest(auth.password or "", web_pass)
+        )
+        if not ok:
+            return Response(
+                "Authentication required.", 401,
+                {"WWW-Authenticate": 'Basic realm="Radarr Janitor"'},
+            )
+        return None
 
     def genres() -> list[str]:
         if "g" not in _cache:

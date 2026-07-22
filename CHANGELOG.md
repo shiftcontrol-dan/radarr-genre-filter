@@ -3,6 +3,10 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/).
 
+## [2.2.0] - 2026-07-22
+### Added
+- App-level HTTP Basic Auth on the web UI (`WEB_USER`/`WEB_PASSWORD`), defense-in-depth behind Cloudflare Access.
+
 ## [2.1.0] - 2026-07-22
 ### Added
 - Flask web UI (`radarr-janitor-web`): configure sweeps, review candidates, protect films, and delete with an explicit confirm.
