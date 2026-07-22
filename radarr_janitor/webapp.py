@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from flask import Flask, Response, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from .cli import humanize
 from .config import Config
@@ -24,25 +24,37 @@ def create_app(cfg: Config | None = None) -> Flask:
 
     web_user = os.environ.get("WEB_USER")
     web_pass = os.environ.get("WEB_PASSWORD")
+    auth_enabled = bool(web_user and web_pass)
 
     @app.before_request
     def _require_login():
-        # App-level HTTP Basic Auth. Disabled if WEB_USER/WEB_PASSWORD are unset
-        # (e.g. purely-local use); enabled in the container for janitor.dangericke.com.
-        if not web_user or not web_pass:
+        # Session-based login form (so password managers can save it).
+        # Disabled entirely if WEB_USER/WEB_PASSWORD are unset (purely-local use).
+        if not auth_enabled or request.endpoint in ("login", "logout", "static"):
             return None
-        auth = request.authorization
-        ok = (
-            auth is not None
-            and hmac.compare_digest(auth.username or "", web_user)
-            and hmac.compare_digest(auth.password or "", web_pass)
-        )
-        if not ok:
-            return Response(
-                "Authentication required.", 401,
-                {"WWW-Authenticate": 'Basic realm="Radarr Janitor"'},
-            )
-        return None
+        if session.get("authed"):
+            return None
+        return redirect(url_for("login", next=request.path))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if not auth_enabled:
+            return redirect(url_for("index"))
+        error = None
+        if request.method == "POST":
+            u = request.form.get("username", "")
+            p = request.form.get("password", "")
+            if hmac.compare_digest(u, web_user) and hmac.compare_digest(p, web_pass):
+                session["authed"] = True
+                session.permanent = True
+                return redirect(request.args.get("next") or url_for("index"))
+            error = "Invalid username or password."
+        return render_template("login.html", error=error)
+
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        return redirect(url_for("login"))
 
     def genres() -> list[str]:
         if "g" not in _cache:

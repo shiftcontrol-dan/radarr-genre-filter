@@ -44,6 +44,7 @@
   <span class="muted">
     {% if run %}latest report #{{ run.id }} · {{ run.ts[:16].replace("T"," ") }}{% else %}no report yet{% endif %}
   </span>
+  <a href="{{ url_for('logout') }}" class="muted" style="margin-left:auto">logout</a>
 </header>
 <main>
   {% with messages = get_flashed_messages() %}
@@ -74,8 +75,7 @@
     <span class="pill keep">protected: {{ totals.keep.n }}</span>
   </div>
 
-  <form method="post" action="{{ url_for('apply') }}"
-        onsubmit="return confirm('Delete the checked movies from Radarr and disk? This cannot be undone.');">
+  <form method="post" action="{{ url_for('apply') }}">
     <div class="panel">
       {% for verdict in ['remove','review','keep'] %}
         {% set rows = groups.get(verdict, []) %}
@@ -112,7 +112,8 @@
       <div class="sticky-actions">
         <label style="margin:0;text-transform:none"><input type="checkbox" name="deletefile" checked> delete files</label>
         <label style="margin:0;text-transform:none"><input type="checkbox" name="exclude"> add exclusion (blacklist; skipped for seasonal)</label>
-        <button type="submit" class="danger">Delete checked</button>
+        <button type="submit" class="danger"
+                onclick="return confirm('Delete the checked movies from Radarr and disk? This cannot be undone.');">Delete checked</button>
       </div>
     </div>
   </form>

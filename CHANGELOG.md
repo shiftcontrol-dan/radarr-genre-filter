@@ -5,7 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versioning is [S
 
 ## [2.2.0] - 2026-07-22
 ### Added
-- App-level HTTP Basic Auth on the web UI (`WEB_USER`/`WEB_PASSWORD`), defense-in-depth behind Cloudflare Access.
+- Session-based login **form** on the web UI (`WEB_USER`/`WEB_PASSWORD`/`WEB_SECRET`), password-manager friendly, defense-in-depth behind Cloudflare Access.
+### Fixed
+- Protect button no longer triggers the delete confirmation modal (confirm moved onto the delete action).
 
 ## [2.1.0] - 2026-07-22
 ### Added
